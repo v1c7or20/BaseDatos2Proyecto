@@ -1,0 +1,8 @@
+//
+// Created by msi on 29/09/2020.
+//
+
+#ifndef BASEDATOS2PROYECTO_ISAM_H
+#define BASEDATOS2PROYECTO_ISAM_H
+
+#endif //BASEDATOS2PROYECTO_ISAM_H

@@ -14,10 +14,12 @@ template <typename keyType, typename Record>
 class SecuentialFile{
 private:
     std::string fileName;
+    long sizeRecord;
 public:
     SecuentialFile(std::string _filename){
         fileName = std::move(_filename);
         long first = 0, second = -1;
+        sizeRecord = sizeof(Record);
 
         std::ofstream writer;
         writer.open(this->fileName, std::ios::in | std::ios::out | std::ios::binary);
@@ -51,6 +53,9 @@ public:
         //Get the erased pointer from file
         reader.seekg(sizeof(long ), std::ios::beg);
         reader.read((char *) &erasedPointer, sizeof(long ));
+        reader.seekg(0,std::ios::beg);
+        reader.read((char *) &positionBefore, sizeof(long));
+
         if (nroData == 0){
             append.write((char *) &recordToInsert, sizeof(Record));
             writer.seekp(std::ios::beg);
@@ -58,12 +63,14 @@ public:
         } else if (nroData == 1){
             reader.seekg( 2 * sizeof(long), std::ios::beg);
             reader.read((char *) (&recordBefore), sizeof(Record));
-            if (recordBefore.getKey() < recordToInsert.getKey()){
-                recordBefore.setNext(2);
+            if (recordBefore.getKey() < recordToInsert.getKey()) {
+                recordBefore.setNext(nroData);
                 recordToInsert.setNext(-1);
+                nroData = 0;
             } else{
+
                 recordBefore.setNext(-1);
-                recordToInsert.setNext(2);
+                recordToInsert.setNext(0);
             }
             append.write((char *) &recordToInsert, sizeof(Record));
             writer.seekp(2 * sizeof(long), std::ios::beg);
@@ -75,7 +82,7 @@ public:
             //Get the last position of deleted record
             if (erasedPointer != -1){
                 Record  * iterErased;
-                reader.seekg(erasedPointer * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
+                reader.seekg(erasedPointer * sizeRecord + 2 * sizeof(long), std::ios::beg);
                 reader.read((char *) iterErased, sizeof(Record));
                 writer.seekp(1 * sizeof(long), std::ios::beg);
                 long nextErased = iterErased->getNextErased();
@@ -85,24 +92,24 @@ public:
 
             reader.seekg(0,std::ios::beg);
             reader.read((char *) &positionBefore, sizeof(long));
-            reader.seekg(positionBefore * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
+            reader.seekg(positionBefore * sizeRecord + 2 * sizeof(long), std::ios::beg);
             reader.read((char *) &recordBefore, sizeof(Record));
 
             if (recordToInsert.getKey() < recordBefore.getKey()){
-                recordToInsert.setNext(positionBefore);
 
+                recordToInsert.setNext(positionBefore);
                 writer.seekp(0 * sizeof(long), std::ios::beg);
                 writer.write((char *) &nroData, sizeof(long));
             } else{
                 do{
                     long nextPosition = recordBefore.getNext();
-                    reader.seekg(nextPosition * sizeof(Record) + 2 * sizeof(long ), std::ios::beg);
+                    reader.seekg(nextPosition * sizeRecord + 2 * sizeof(long ), std::ios::beg);
                     reader.read((char *) &recordNext, sizeof(Record));
                     if (recordBefore.getKey() < recordToInsert.getKey() and recordToInsert.getKey() < recordNext.getKey()){
 
                         recordToInsert.setNext(recordBefore.getNext());
                         recordBefore.setNext(nroData);
-                        writer.seekp(positionBefore * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
+                        writer.seekp(positionBefore * sizeRecord + 2 * sizeof(long), std::ios::beg);
                         writer.write((char *) &recordBefore, sizeof(Record));
                         break;
                     }
@@ -110,16 +117,16 @@ public:
                     positionBefore = nextPosition;
                 }while (recordNext.getNext() != -1);
             }
-            if (recordBefore.getKey() < recordToInsert.getKey()){
-                recordToInsert.setNext(-1);
+            if (recordNext.getKey() < recordToInsert.getKey()){
 
-                recordBefore.setNext(nroData);
-                writer.seekp(positionBefore * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
-                writer.write((char *) &recordBefore, sizeof(Record));
+                recordToInsert.setNext(-1);
+                recordNext.setNext(nroData);
+                writer.seekp(positionBefore * sizeRecord + 2 * sizeof(long), std::ios::beg);
+                writer.write((char *) &recordNext, sizeof(Record));
             }
 
             if (usedErasedSpace){
-                writer.seekp(erasedPointer * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
+                writer.seekp(erasedPointer * sizeRecord + 2 * sizeof(long), std::ios::beg);
                 writer.write((char *) &recordToInsert, sizeof(Record));
             } else{
                 append.write((char *) &recordToInsert, sizeof(Record));
@@ -128,22 +135,23 @@ public:
     }
 
     Record searchRecord(keyType keyToLook){
-        Record foundRecord("");
-        long positionBefore;
 
         std::ifstream reader;
         reader.open(this->fileName, std::ios::in);
 
+        long positionBefore;
         reader.seekg(0,std::ios::beg);
         reader.read((char *) &positionBefore, sizeof(long));
-        reader.seekg(2 * sizeof(long ), std::ios::beg);
+
+        Record foundRecord("");
+        reader.seekg((positionBefore * sizeof(Record)) + (2 * sizeof(long )), std::ios::beg);
         reader.read((char *) &foundRecord, sizeof(Record));
 
         while (foundRecord.getNext() != -1){
             if (foundRecord.getKey() == keyToLook){
                 return foundRecord;
             }
-            reader.seekg(foundRecord.getNext() * sizeof(Record) + 2 * sizeof(long ),std::ios::beg);
+            reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
             reader.read((char *) &foundRecord, sizeof(Record));
         }
     }
@@ -161,14 +169,14 @@ public:
             reader.seekg(0 , std::ios::beg);
             reader.read((char *) &delPointer, sizeof(long ));
 
-            reader.seekg(2 * sizeof(long) + delPointer * sizeof(Record),std::ios::beg);
+            reader.seekg(2 * sizeof(long) + delPointer * sizeRecord,std::ios::beg);
             reader.read((char *) &obj, sizeof(Record ));
 
             while (obj.getNext() != -1){
                 if (obj.getKey() == key){
                     break;
                 }
-                reader.seekg(obj.getNext() * sizeof(Record) + 2 * sizeof(long ),std::ios::beg);
+                reader.seekg(obj.getNext() * sizeRecord + 2 * sizeof(long ),std::ios::beg);
                 reader.read((char *) &obj, sizeof(Record));
                 objBefore = obj;
                 delBefore = delPointer;
@@ -190,13 +198,13 @@ public:
                 inFile.seekg(sizeof(long ), std::ios::beg);
                 inFile.write((char *) &delBefore, sizeof(long ));
 
-                inFile.seekg(2 * sizeof(long) + delPointer * sizeof(Record),std::ios::beg);
+                inFile.seekg(2 * sizeof(long) + delPointer * sizeRecord,std::ios::beg);
                 inFile.write((char *) &obj, sizeof(Record));
 
-                inFile.seekg(2 * sizeof(long) + delBefore * sizeof(Record),std::ios::beg);
+                inFile.seekg(2 * sizeof(long) + delBefore * sizeRecord,std::ios::beg);
                 inFile.write((char *) &objBefore, sizeof(Record));
             }
-            reader.seekg(delPointer * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
+            reader.seekg(delPointer * sizeRecord + 2 * sizeof(long), std::ios::beg);
             reader.read((char *) &obj, sizeof(Record));
             while (obj.getNextErased() != -1){
 
@@ -212,7 +220,7 @@ public:
         if (inFile.is_open()) {
             inFile.seekg(2 * sizeof(long), std::ios::end);
             long bytes = inFile.tellg();
-            numRecords = (bytes) / sizeof(Record);
+            numRecords = (bytes) / sizeRecord;
             inFile.close();
         } else {
             std::cout << "Could not open the file.\n";

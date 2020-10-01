@@ -4,23 +4,22 @@
 
 
 int main() {
-    SecuentialFile<std::string,Record<std::string>> * fileSequential;
-    fileSequential = new SecuentialFile<std::string ,Record<std::string>>("SecFile.data");
+    SecuentialFile<int,Record<int>> * fileSequential;
+    fileSequential = new SecuentialFile<int ,Record<int>>("SecFile.data");
 
-    Record<std::string> r1("key1"),r2("key2"),r3("key3"),r4("key4"),r5("key5"),r6("key6"),r7("key7"),r8("key8");
+    Record<int> r1(1),r2(2),r3(3),r4(4),r5(5),r6(6),r7(7),r8(8);
 
     fileSequential->insertRecord(r1);
     fileSequential->insertRecord(r6);
     fileSequential->insertRecord(r2);
     fileSequential->insertRecord(r4);
     fileSequential->insertRecord(r7);
-    Record<std::string> rp(" ");
-    rp = fileSequential->searchRecord("key1");
-    rp = fileSequential->searchRecord("key4");
-    rp = fileSequential->searchRecord("key6");
-    rp = fileSequential->searchRecord("key2");
-    rp = fileSequential->searchRecord("key7");
+    Record<int> rp(0);
+    rp = fileSequential->searchRecord(1);
+    rp = fileSequential->searchRecord(4);
+    rp = fileSequential->searchRecord(6);
+    rp = fileSequential->searchRecord(2);
+    rp = fileSequential->searchRecord(7);
 
-    std::cout << "Hello, World!" << std::endl;
     return 0;
 }

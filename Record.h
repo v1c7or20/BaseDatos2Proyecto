@@ -10,7 +10,7 @@ class Record{
 private:
     keyType key;
     long next = -1;
-    long nextErased;
+    long nextErased = -1;
 public:
     keyType getKey(){
         return key;

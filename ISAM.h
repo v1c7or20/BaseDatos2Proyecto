@@ -8,7 +8,8 @@
 #include <fstream>
 #include <string>
 #include <iostream>
-
+#include <vector>
+#include <algorithm>
 
 template <typename keyType, typename Record>
 class ISAM{
@@ -34,20 +35,6 @@ public:
         writer.seekp(1 * sizeof(long), std::ios::beg);
         writer.write((char *) &second, sizeof(long));
 
-        writer.open(this->fileNameIndex0, std::ios::in | std::ios::out | std::ios::binary);
-
-        writer.seekp(0 * sizeof(long), std::ios::beg);
-        writer.write((char *) &first, sizeof(long));
-        writer.seekp(1 * sizeof(long), std::ios::beg);
-        writer.write((char *) &second, sizeof(long));
-
-        writer.open(this->fileNameIndex1, std::ios::in | std::ios::out | std::ios::binary);
-
-        writer.seekp(0 * sizeof(long), std::ios::beg);
-        writer.write((char *) &first, sizeof(long));
-        writer.seekp(1 * sizeof(long), std::ios::beg);
-        writer.write((char *) &second, sizeof(long));
-
     }
     void insertRecord(Record recordToInsert) {
         Record recordBefore(0);          //Record before recordToInsert
@@ -56,7 +43,8 @@ public:
         long erasedPointer;             //Pointer to records that were deleted
         bool usedErasedSpace = false;   //Used to identify were to write te record
 
-        long nroDataLocal = nroData++;
+        long nroDataLocal = nroData;
+        nroData++;
 
         Record recordNext(0);
         //Use only to read
@@ -155,17 +143,92 @@ public:
     }
 
     void reviewIndex(){
-        if ((int) (nroData / nroInd != 0) ){
+        int nroIndex = getNroDataFile(this->fileNameIndex1);
+        if ((int) (nroData / nroInd != 0) and nroData == (nroIndex+1) * nroInd) {
+            int nroPoint = nroInd / 2, totalPointer = (nroData / nroInd) * 2;
+            std::vector<long> positions;
 
+            for (int data = 1; data <= totalPointer; ++data) {
+                long toInsert =  nroPoint * data - 1;
+                positions.push_back(toInsert);
+            }
+
+            std::ifstream reader;
+            reader.open(this->fileName, std::ios::in);
+
+            std::ofstream writer;
+            writer.open(this->fileNameIndex0, std::ios::in | std::ios::out | std::ios::binary);
+
+            long positionBefore;
+            reader.seekg(0,std::ios::beg);
+            reader.read((char *) &positionBefore, sizeof(long));
+
+            Record foundRecord(0);
+            reader.seekg((positionBefore * sizeof(Record)) + (2 * sizeof(long )), std::ios::beg);
+            reader.read((char *) &foundRecord, sizeof(Record));
+
+            int pos = 0;
+            for (int datos = 0; datos < nroData; ++datos) {
+                auto it = std::find(positions.begin(),positions.end(),datos);
+                if (it != positions.end()){
+                    std::pair<keyType,long> toEnter(foundRecord.getKey(),positionBefore);
+                    writer.seekp((pos * sizeof(std::pair<keyType,long>)));
+                    writer.write((char *) &toEnter.first, sizeof(keyType));
+                    writer.write((char *) &toEnter.second, sizeof(long ));
+                    pos++;
+                }
+                positionBefore = foundRecord.getNext();
+                reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
+                reader.read((char *) &foundRecord, sizeof(Record));
+            }
+        }
+        long nroDataIndex0 = getNroDataFile(this->fileNameIndex0);
+        if (nroDataIndex0 / nroInd != 0){
+            int nroPoint = nroInd / 2, totalPointer = (nroData / nroInd) * 2;
+            std::vector<long> positions;
+
+            for (int data = 0; data < totalPointer; ++data) {
+                long toInsert =  nroPoint * data - 1;
+                positions.push_back(toInsert);
+            }
+
+            std::ifstream reader;
+            reader.open(this->fileNameIndex0, std::ios::in);
+
+            std::ofstream writer;
+            writer.open(this->fileNameIndex1, std::ios::in | std::ios::out | std::ios::binary);
+
+            long positionBefore;
+            reader.seekg(0,std::ios::beg);
+            reader.read((char *) &positionBefore, sizeof(long));
+
+            Record foundRecord(0);
+            reader.seekg((positionBefore * sizeof(Record)) + (2 * sizeof(long )), std::ios::beg);
+            reader.read((char *) &foundRecord, sizeof(Record));
+
+            int pos = 0;
+            for (int datos = 0; datos < nroData; ++datos) {
+                auto it = std::find(positions.begin(),positions.end(),datos);
+                if (it != positions.end()){
+                    std::pair<keyType,long>toEnter(foundRecord.getKey(),positionBefore);
+                    writer.seekp((pos * sizeof(Record)));
+                    writer.write((char *) &toEnter.first, sizeof(keyType));
+                    writer.write((char *) &toEnter.second, sizeof(long ));
+                    pos++;
+                }
+                positionBefore = foundRecord.getNext();
+                reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
+                reader.read((char *) &foundRecord, sizeof(Record));
+            }
         }
     }
 
-    long getFromIndex0(Record recordTo){
+    long getFromIndex0(keyType key){
         std::pair<keyType,long> pointerToCompare;
         std::ifstream reader;
-        reader.open(this->fileName, std::ios::in);
+        reader.open(this->fileNameIndex0, std::ios::in);
 
-        long start = getFromIndex1(recordTo);
+        long start = getFromIndex1(key);
 
         long data = getNroDataFile(this->fileNameIndex0);
 
@@ -173,20 +236,25 @@ public:
             return 0;
         } else{
             for (int iter = start; iter < data; ++iter) {
-                reader.seekg(iter * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
-                reader.read((char *) pointerToCompare, sizeof(std::pair<keyType,long>));
-                if (recordTo.getKey() < pointerToCompare.first){
-                    return pointerToCompare.second;
+                reader.seekg(iter * (sizeof(keyType) + sizeof(long)), std::ios::beg);
+                reader.read((char *) &(pointerToCompare.first), sizeof(keyType));
+                reader.read((char *) &(pointerToCompare.second), sizeof(long));
+
+                if (key < pointerToCompare.first){
+                    return pointerToCompare.second-1;
                 }
+            }
+            if (pointerToCompare.first < key){
+                return pointerToCompare.second;
             }
             return 0;
         }
     }
 
-    long getFromIndex1(Record recordTo){
+    long getFromIndex1(keyType key){
         std::pair<keyType,long> pointerToCompare;
         std::ifstream reader;
-        reader.open(this->fileName, std::ios::in);
+        reader.open(this->fileNameIndex1, std::ios::in);
 
         long data = getNroDataFile(this->fileNameIndex1);
 
@@ -194,9 +262,10 @@ public:
             return 0;
         } else{
             for (int iter = 0; iter < data; ++iter) {
-                reader.seekg(iter * sizeof(Record) + 2 * sizeof(long), std::ios::beg);
-                reader.read((char *) pointerToCompare, sizeof(std::pair<keyType,long>));
-                if (recordTo.getKey() < pointerToCompare.first){
+                reader.seekg(iter * (sizeof(keyType) + sizeof(long )), std::ios::beg);
+                reader.read((char *) &pointerToCompare.first, sizeof(keyType));
+                reader.read((char *) &pointerToCompare.second, sizeof(long));
+                if (key < pointerToCompare.first){
                     return pointerToCompare.second;
                 }
             }
@@ -212,8 +281,8 @@ public:
         if (inFile.is_open()) {
             inFile.seekg(0, std::ios::end);
             long bytes = inFile.tellg() ;
-            bytes = bytes - (2 * sizeof(long));
-            numRecords = (bytes) / sizeof(std::pair<keyType,long>);
+            numRecords = (bytes) / (sizeof(keyType)+sizeof(long ));
+
             inFile.close();
         } else {
             std::cout << "Could not open the file.\n";
@@ -221,7 +290,25 @@ public:
         return numRecords;
     }
 
+    Record searchRecord(keyType keyToLook){
 
+        std::ifstream reader;
+        reader.open(this->fileName, std::ios::in);
+
+        long positionBefore = getFromIndex0(keyToLook);
+
+        Record foundRecord(0);
+        reader.seekg((positionBefore * sizeof(Record)) + (2 * sizeof(long )), std::ios::beg);
+        reader.read((char *) &foundRecord, sizeof(Record));
+
+        while (foundRecord.getNext() != -1 or foundRecord.getKey() == keyToLook){
+            if (foundRecord.getKey() == keyToLook){
+                return foundRecord;
+            }
+            reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
+            reader.read((char *) &foundRecord, sizeof(Record));
+        }
+    }
 };
 
 #endif //BASEDATOS2PROYECTO_ISAM_H

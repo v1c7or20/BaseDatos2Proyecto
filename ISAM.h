@@ -36,6 +36,7 @@ public:
         writer.write((char *) &second, sizeof(long));
 
     }
+
     void insertRecord(Record recordToInsert) {
         Record recordBefore(0);          //Record before recordToInsert
         long positionBefore;            //Position of record before recordToInsert

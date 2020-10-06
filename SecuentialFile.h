@@ -130,6 +130,9 @@ public:
                 writer.write((char *) &recordToInsert, sizeof(Record));
             } else{
                 append.write((char *) &recordToInsert, sizeof(Record));
+                writer.close();
+                append.close();
+                reader.close();
             }
         }
     }

@@ -242,7 +242,7 @@ public:
                 reader.read((char *) &(pointerToCompare.second), sizeof(long));
 
                 if (key < pointerToCompare.first){
-                    return pointerToCompare.second-1;
+                    return pointerToCompare.second-((nroInd/2)-1);
                 }
             }
             if (pointerToCompare.first < key){

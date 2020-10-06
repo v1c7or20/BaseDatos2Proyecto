@@ -6,12 +6,14 @@
 #ifndef BASEDATOS2PROYECTO_RECORDBUCKET_H
 #define BASEDATOS2PROYECTO_RECORDBUCKET_H
 
-const int BUCKET_SIZE = 128;
+#include <vector>
+
+const int BUCKET_SIZE = 4;
 
 template <typename Record>
 class RecordBucket {
 private:
-    Record records[BUCKET_SIZE];
+    std::vector<Record> records;
     int size;
     long nextBucket;
 public:

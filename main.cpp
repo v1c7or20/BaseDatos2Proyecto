@@ -7,10 +7,10 @@ int main() {
     SecuentialFile<int,Record<int>> * fileSequential;
     fileSequential = new SecuentialFile<int ,Record<int>>("SecFile.data");
 
-    Record<int> rp(0);
+    Record<int32_t> rp(0);
 
-    for (int i = 0; i < 26; ++i) {
-        Record<int> recordISAM(i);
+    for (int i = 0; i < 46; ++i) {
+        Record<int32_t> recordISAM(i*2);
         fileSequential->insertRecord(recordISAM);
     }
 

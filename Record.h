@@ -35,8 +35,7 @@ public:
     Record(keyType _key){
         key = _key;
     }
-    Record(void ){
-
+    Record( ){
     }
 };
 

@@ -2,8 +2,16 @@
 #include "SecuentialFile.h"
 #include "ISAM.h"
 #include "Record.h"
+#include "ExtendibleHash.h"
 
 int main() {
+    ExtendibleHashTree<Record<int>,int> extendibleHashTree(3,"Exte.data");
+    for (int i = 0; i < 46; ++i) {
+        Record<int32_t> recordISAM(i*2);
+        extendibleHashTree.insertRecord(recordISAM);
+    }
+
+
     SecuentialFile<int,Record<int>> * fileSequential;
     fileSequential = new SecuentialFile<int ,Record<int>>("SecFile.data");
 

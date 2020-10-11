@@ -7,7 +7,7 @@
 #include "Bucket.h"
 
 template<typename Record, typename keyType>
-class ExtendibleHashTree {
+class ExtendibleHash {
 private:
     std::string file;
     int globalDepth;
@@ -16,7 +16,7 @@ private:
     int nroBuckets = 2;
 
 public:
-    ExtendibleHashTree(int globalDepthC, std::string fileC){
+    ExtendibleHash(int globalDepthC, std::string fileC){
         globalDepth = globalDepthC;
         int totalColumns = pow(2,globalDepth);
         tableInd = new std::pair<int,int>[totalColumns];
@@ -60,19 +60,20 @@ public:
         if(bucket.getSize() < 5 or tableInd[hashed].second == globalDepth){
             bucket.add_data(recordToInsert,file);
             std::ofstream writeO;
-            writeO.open(file, std::ios::binary | std::ios::in | std::ios::out);
-            writeO.seekp(pos*sizeof(Bucket<Record,keyType >));
-            writeO.write((char *) &bucket, std::ios::beg);
+            writeO.open(file, std::ios::in | std::ios::out | std::ios::binary);
+            writeO.seekp(pos*sizeof(Bucket<Record,keyType >),std::ios::beg);
+            writeO.write((char *) &bucket, sizeof(Bucket<Record,keyType >));
+            writeO.close();
         } else if (tableInd[hashed].second < globalDepth){
             Bucket<Record, keyType> first,second;
             int toChange = 0;
             nroBuckets++;
             for (int i =0; i < totalColumns; i++){
-                if (tableInd[i].second == localDepth){
+                if (tablePos[i].second  == pos){
                     toChange++;
                     tableInd[i].second = localDepth + 1;
                     if (toChange%2 == 1){
-                        tablePos[i].second = nroBuckets;
+                        tablePos[i].second = nroBuckets-1;
                     }
                 }
             }
@@ -85,15 +86,18 @@ public:
                     second.add_data(array[r],file);
                 }
             }
+            first.add_data(recordToInsert,file);
             std::ofstream write;
             write.open(file, std::ios::app | std::ios::binary);
-            write.write((char *) &second, sizeof(Record));
+            write.write((char *) &second, sizeof(Bucket<Record,keyType >));
             std::ofstream writeO;
             writeO.open(file, std::ios::binary | std::ios::in | std::ios::out);
-            writeO.seekp(pos*sizeof(Bucket<Record,keyType >));
-            writeO.write((char *) &first, std::ios::beg);
+            writeO.seekp(pos*sizeof(Bucket<Record,keyType >),std::ios::beg);
+            writeO.write((char *) &first,sizeof(Bucket<Record,keyType >));
+            write.close();
+            write.close();
         }
-
+        reader.close();
     }
 
     Record * searchRecord(keyType key){

@@ -19,7 +19,7 @@ public:
     SecuentialFile(std::string _filename){
         fileName = std::move(_filename);
         long first = 0, second = -1;
-        nroData = 0;
+        nroData = getNroData();
         std::ofstream writer;
         writer.open(this->fileName, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -157,6 +157,7 @@ public:
             reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
             reader.read((char *) &foundRecord, sizeof(Record));
         }
+        return foundRecord;
     }
 
     void deleteRecord(keyType key) {

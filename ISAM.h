@@ -26,7 +26,7 @@ public:
         fileNameIndex1 = _file + ".index1";
 
         long first = 0, second = -1;
-        nroData = 0;
+        nroData = getNroData();
         std::ofstream writer;
         writer.open(this->fileName, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -291,6 +291,22 @@ public:
         return numRecords;
     }
 
+    long getNroData(){
+        int numRecords = 0;
+        std::fstream inFile;
+        inFile.open(this->fileName, std::ios::in | std::ios::binary);
+        if (inFile.is_open()) {
+            inFile.seekg(0, std::ios::end);
+            long bytes = inFile.tellg() ;
+            bytes = bytes - (2 * sizeof(long));
+            numRecords = (bytes) / sizeof(Record);
+            inFile.close();
+        } else {
+            std::cout << "Could not open the file.\n";
+        }
+        return numRecords;
+    }
+
     Record searchRecord(keyType keyToLook){
 
         std::ifstream reader;
@@ -309,6 +325,7 @@ public:
             reader.seekg((foundRecord.getNext() * sizeof(Record)) + (2 * sizeof(long )),std::ios::beg);
             reader.read((char *) &foundRecord, sizeof(Record));
         }
+        return foundRecord;
     }
 };
 

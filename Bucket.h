@@ -41,6 +41,7 @@ public:
                 std::ofstream writer;
                 writer.open(file,std::ios::app | std::ios::binary);
                 writer.write((char *) &newBucket,sizeof(Bucket<data,keyType>));
+                writer.close();
 
             } else{
                 Bucket<data,keyType> nextBucketB;
@@ -53,10 +54,12 @@ public:
                 std::ofstream writer;
                 writer.open(file,std::ios::app | std::ios::binary);
                 writer.write((char *) &nextBucketB,sizeof(Bucket<data,keyType>));
+                writer.close();
             }
         } else{
             dataArray[sizeArray] = dataRecord;
         }
+        sizeArray++;
     }
 
     data * getRecord(keyType key,std::string file){
@@ -73,6 +76,7 @@ public:
             reader.open(file,std::ios::in);
             reader.seekg(nextBucket * sizeof(Bucket<data,keyType>),std::ios::beg);
             reader.read((char *) &nextBucketB, sizeof(Bucket<data,keyType>));
+            reader.close();
             return nextBucketB->getRecord(key);
         }
         return nullptr;

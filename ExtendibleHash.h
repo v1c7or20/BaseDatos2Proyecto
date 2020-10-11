@@ -58,7 +58,7 @@ public:
         reader.read((char *) &bucket, sizeof(Bucket<Record, keyType>));
         int localDepth = tableInd[hashed].second;
         if(bucket.getSize() < 5 or tableInd[hashed].second == globalDepth){
-            bucket.add_data(recordToInsert,file);
+            bucket.add_data(recordToInsert,file,nroBuckets);
             std::ofstream writeO;
             writeO.open(file, std::ios::in | std::ios::out | std::ios::binary);
             writeO.seekp(pos*sizeof(Bucket<Record,keyType >),std::ios::beg);

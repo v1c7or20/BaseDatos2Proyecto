@@ -62,6 +62,36 @@ public:
         sizeArray++;
     }
 
+    void add_data(data dataRecord, std::string file, long &bucket){
+        if (sizeArray == 5){
+            if (nextBucket == -1){
+                Bucket<data, keyType> newBucket;
+                newBucket.add_data(dataRecord,file);
+                std::ofstream writer;
+                writer.open(file,std::ios::app | std::ios::binary);
+                writer.write((char *) &newBucket,sizeof(Bucket<data,keyType>));
+                writer.close();
+
+            } else{
+                Bucket<data,keyType> nextBucketB;
+                std::ifstream reader;
+                reader.open(file,std::ios::in);
+                reader.seekg(nextBucket * sizeof(Bucket<data,keyType>),std::ios::beg);
+                reader.read((char *) &nextBucketB, sizeof(Bucket<data,keyType>));
+                nextBucketB.add_data(dataRecord,file);
+                nextBucket = bucket;
+                bucket++;
+                std::ofstream writer;
+                writer.open(file,std::ios::app | std::ios::binary);
+                writer.write((char *) &nextBucketB,sizeof(Bucket<data,keyType>));
+                writer.close();
+            }
+        } else{
+            dataArray[sizeArray] = dataRecord;
+        }
+        sizeArray++;
+    }
+
     data * getRecord(keyType key,std::string file){
         for (auto & dato : dataArray){
             data * data1 = new data();
